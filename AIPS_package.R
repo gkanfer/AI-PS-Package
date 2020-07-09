@@ -21,8 +21,8 @@
 # -------------------------------------------------------------------------
 
 # Image load
-load_image<-function(x,path,minmax_nrom=TRUE,...){
-          x<-readImage()
+load_image<-function(Image_File_name,path,minmax_nrom=TRUE,...){
+          x<-readImage(paste0(path,Image_File_name))
           dim.y<-dim(x)[1]
           dim.X<-dim(x)[2]
           CH1<-x[1:dim.y,1:dim.X,1]
@@ -37,17 +37,18 @@ load_image<-function(x,path,minmax_nrom=TRUE,...){
               CH1<-normalize(CH1, ft=c(0,1),c(minCH1,maxCH1))
               CH2<-normalize(CH2, ft=c(0,1) ,c(minCH2,minCH2)) 
                           }
-          channel_set<-list(CH1,CH2)
+          channel_set<-list()
+          channel_set[["CH1"]]<-CH1
+          channel_set[["CH2"]]<-CH2
           return(channel_set)
           }
 
 
 #' 1.1 Nucleus segmentation 
-#'  
-Nucleus_segmentation<-function(x,intensity=1,filter_size=16,offset=0.04,opensize=3,
+Nucleus_segmentation<-function(x,intens=2,filter_size=16,offset=0.04,opensize=3,
                                rmObjects_small=30,Use_watershed=TRUE,distmap_value=2,rm_outliers=TRUE,Out_P=0.95,
                                Masks_display=TRUE){
-          CH1_seg<- x*2
+          CH1_seg<- x*intens
           CH1mask2 = thresh(CH1_seg, filter_size, filter_size,offset)
           CH1mask2 = opening(CH1mask2, makeBrush(opensize, shape= "diamond")) 
           CH1mask2 = fillHull(CH1mask2) 
@@ -106,22 +107,22 @@ Nucleus_segmentation<-function(x,intensity=1,filter_size=16,offset=0.04,opensize
           }
           gsegg=nseg
           mask<-list()
-          mask["mask_nuc"]<-gsegg
-          masks[["parameters_nuc"]]<-xy
+          mask[["mask_nuc"]]<-gsegg
+          mask[["parameters_nuc"]]<-xy
           if (Masks_display){
                 seg_CH1mask2 = paintObjects(CH1mask2,toRGB(x),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)  
                 seg_mask<-paintObjects(gsegg,toRGB(x),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
-                mask["mask_start"]<-seg_CH1mask2
-                mask["mask_final"]<-seg_mask
+                mask[["mask_start"]]<-seg_CH1mask2
+                mask[["mask_final"]]<-seg_mask
           }
-          return(masks)
+          return(mask)
           
 }
 
 # 1.2 GFP segmentation 
-Cytosol_segmentation <- function (x,y,intensity=40,filter_size=10,offset=0.1,mat_size_smooth=19,
-                                  opensize=7,rmObjects_large=30000,Use_watershed=TRUE,Masks_display=TRUE){
-          Cyto<- x*40
+Cytosol_segmentation <- function (x,y,intens=40,filter_size=10,offset=0.1,mat_size_smooth=19,
+                                  opensize=7,rmObjects_large=30000,Use_watershed=TRUE){
+          Cyto<- x*intens
           Cyto<-filter2(Cyto,makeBrush(mat_size_smooth,shape = "disc") , boundary = c("circular", "replicate"))
           thr<-thresh(Cyto, filter_size, filter_size, offset)
           colorMode(thr)<-Grayscale
@@ -135,11 +136,11 @@ Cytosol_segmentation <- function (x,y,intensity=40,filter_size=10,offset=0.1,mat
           combine[y > combine]<-y[y > combine]
           cseg = propagate(Cyto, y, lambda=1.0e-2, mask=cmask)
           cseg <- fillHull(cseg)
-          colorMode(csegpink)<-Grayscale
-          cseg = propagate(Cyto, gsegg, lambda=1.0e-2, mask=combine)
+          colorMode(cseg)<-Grayscale
+          cseg = propagate(Cyto, y, lambda=1.0e-2, mask=combine)
           cseg <- fillHull(cseg)
           colorMode(cseg)<-Grayscale
-          xy<-computeFeatures.moment(csegpink)[,c('m.cx','m.cy')]
+          xy<-computeFeatures.moment(cseg)[,c('m.cx','m.cy')]
           if (is.null(nrow(xy))){
             stop("no segmented object was detected, change setup parameters")
           }
@@ -150,25 +151,20 @@ Cytosol_segmentation <- function (x,y,intensity=40,filter_size=10,offset=0.1,mat
           cfErea<-data.frame(cf[,1])
           cfErea$num<-row.names(cfErea)
           ci = which(cf[,1] > rmObjects_large) 
-          csegpink = rmObjects(cseg, ci,reenumerate = F) 
+          cseg = rmObjects(cseg, ci,reenumerate = F) 
           xy.gsegg<-as.numeric(row.names(computeFeatures.moment(y)[,c('m.cx','m.cy')]))
           xy.cseg<- as.numeric(row.names(computeFeatures.moment(cseg)[,c('m.cx','m.cy')])) 
           ind.deff<-setdiff(xy.gsegg,xy.cseg)
-          gsegg<-rmObjects(gsegg,ind.deff,reenumerate=F)
+          gsegg<-rmObjects(y,ind.deff,reenumerate=F)
           gsegg<-reenumerate(gsegg)
           cseg<-reenumerate(cseg)
+          xy.gsegg_table<-computeFeatures.moment(gsegg)[,c('m.cx','m.cy')]
+          xy.cseg_table<- computeFeatures.moment(cseg)[,c('m.cx','m.cy')]
           masks<-list()
           masks[["mask_nuc"]]<-gsegg
-          masks[["parameters_nuc"]]<-xy.gsegg
+          masks[["parameters_nuc"]]<-xy.gsegg_table
           masks[["mask_cyto"]]<-cseg
-          masks[["parameters_cyto"]]<-xy.cseg
-          if (Masks_display){
-              seg_gsegg = paintObjects(CH1mask2,toRGB(Cyto),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)  
-              seg_cseg<-paintObjects(gsegg,toRGB(Cyto),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
-              mask["display_mask_nuc"]<-seg_gsegg
-              mask["display_mask_cyto"]<-seg_mask
-          }
-          
+          masks[["parameters_cyto"]]<-xy.cseg_table
           return(masks)
           }
 
@@ -178,26 +174,26 @@ Cytosol_segmentation <- function (x,y,intensity=40,filter_size=10,offset=0.1,mat
 # -------------------------------------------------------------------------
 # 2.1 Features measures 
 Feature_extract<- function(x,mask_cyto,label_class="Postive"){
-          table_shape = computeFeatures.shape(mask_cyto,x)
-          table_moment = computeFeatures.moment(mask_cyto,x)
-          table_basic = computeFeatures.basic(mask_cyto,x)
-          table_test<-data.frame(cbind(table_basic,table_moment,table_shape))
-          rownameTable<-row.names(table_test_pink)
-          table_test_pink<-data.frame(cbind(rownameTable,table_test_pink))
-          Ts.mix<-table_test_pink[,2:20]
-          rowNameTable<-table_test_pink[,1]
-          Ts.mix$predict<-label_class
-          Features_Table<-list()
-          Features_Table[["Ts.mix"]]<-Ts.mix
-          Features_Table[["rowNameTable"]]<-rowNameTable
-          return(Features_Table)
+        table_shape = computeFeatures.shape(mask_cyto,x)
+        table_moment = computeFeatures.moment(mask_cyto,x)
+        table_basic = computeFeatures.basic(mask_cyto,x)
+        table_test <- as.data.frame(cbind(table_basic,table_moment,table_shape))
+        rownameTable<-row.names(table_test)
+        table_test_Feture<-data.frame(cbind(rownameTable,table_test))
+        Ts.mix<-table_test_Feture[,2:20]
+        rowNameTable<-table_test_Feture[,1]
+        Ts.mix$predict<-label_class
+        Features_Table<-list()
+        Features_Table[["Ts.mix"]]<-Ts.mix
+        Features_Table[["rowNameTable"]]<-rowNameTable
+        return(Features_Table)
 }
 
 # 2.2 Cell picking 
 Pick_cells<-function(mask_nuc,x,Ts.mix,intens,parameters_nuc,font_size=0.7,label_class="Postive",
-                     Masks_display){
+                     Masks_display=TRUE){
           seg_disp = paintObjects(mask_nuc,toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
-          display(seg_pink_positive,"raster")
+          display(seg_disp,"raster")
           celltext = text(x= parameters_nuc[,1], y= parameters_nuc[,2] , labels="", col="yellow", cex = font_size)
           c<-0
           readline("loop")
@@ -211,11 +207,13 @@ Pick_cells<-function(mask_nuc,x,Ts.mix,intens,parameters_nuc,font_size=0.7,label
           row_numb<-as.data.frame(row_numb)
           Ts.mix$predict<-0
           if (label_class=="Postive"){
-              Ts.mix[row_numb$V1,21]<-"P"
+              Ts.mix[row_numb$V1,20]<-"P"
+              Ts.mix[-row_numb$V1,20]<-"N"
           }else{
-              Ts.mix[row_numb$V1,21]<-"N"  
+              Ts.mix[row_numb$V1,20]<-"N"  
+              Ts.mix[-row_numb$V1,20]<-"P"
               }
-          nr = which(Ts.training$predict %in% 0)
+          nr = which(Ts.mix$predict %in% "N")
           
           Table_class<-list()
           if (Masks_display){
@@ -231,12 +229,19 @@ Pick_cells<-function(mask_nuc,x,Ts.mix,intens,parameters_nuc,font_size=0.7,label
 # 2.3 SVM model device 
 
 Model_svm<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
-          x<-(Table_class_train[,2:20])
-          y<-Table_class_train[,21]
-          
+        ind0<-which(is.na(Table_class_train$predict))
+        if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+        ind<-which(is.na(Table_class_train$predict))
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+        ind1<-grep("\\d",Table_class_train$predict)
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]  
+        x<-(Table_class_train[,2:19])
+        y<-Table_class_train[,20]
           if (kernel_linear){
               acc<-rep(0,100)
+               pb <- progress_bar$new(total = 100)
               for (i in 1:length(acc)){
+                pb$tick()
                 TestIndex<-sample(nrow(x),round(nrow(x)/2))
                 model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
                 y.pred<-predict(model,x[-TestIndex,])
@@ -244,7 +249,9 @@ Model_svm<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
                 }
               }else{
               acc<-rep(0,100)
+              pb <- progress_bar$new(total = 100)
               for (i in 1:length(acc)){
+                pb$tick()
                 TestIndex<-sample(nrow(x),round(nrow(x)/2))
                 model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
                 y.pred<-predict(model,x[-TestIndex,])
@@ -255,9 +262,26 @@ Model_svm<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
 }
 # 2.4 Features reduction using PCA analysis
 
-Fetures_PCA<-function(Table_class_train,cartesian_lim_x=c(-12,10),cartesian_lim_y =c(-10,5),font_size=14){
-          myPr <- prcomp(Table_class_train[, 2:19], scale = TRUE) 
-          PCA_PLOT<-ggbiplot(myPr, pc.biplot = T,obs.scale = 2, var.scale = 1, groups = F, ellipse = F, circle = F,alpha = 0.02,varname.adjust = 5)+
+Fetures_PCA<-function(Table_class_train,cartesian_lim_x=c(-12,10),cartesian_lim_y=c(-10,5),font_size=14){
+        ind0<-which(is.na(Table_class_train$predict))
+        if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+        ind<-which(is.na(Table_class_train$predict))
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+        ind1<-grep("\\d",Table_class_train$predict)
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]   
+        Table_class_train<-Table_class_train %>% filter_at(vars(1:20), all_vars(!is.infinite(.)))
+        x<-1
+        z<-sample(1:nrow(Table_class_train),nrow(Table_class_train))
+        while (x<10){
+                myPr <- try(prcomp(Table_class_train[z, 2:19], scale = TRUE))
+                if (inherits(myPr, "try-error")) {
+                        x<-x+1
+                        z<-sample(1:nrow(Table_class_train),round(nrow(Table_class_train)/x,2))
+                }else{
+                        break
+                }
+        }
+        PCA_PLOT<-ggbiplot(myPr, pc.biplot = T,obs.scale = 2, var.scale = 1, groups = F, ellipse = F, circle = F,alpha = 0.02,varname.adjust = 5)+
                     coord_cartesian(xlim = cartesian_lim_x,ylim = cartesian_lim_y)+
                     theme(axis.title.x =element_text(size = font_size))+
                     theme(axis.title.y =element_text(size = font_size))+
@@ -270,43 +294,259 @@ Fetures_PCA<-function(Table_class_train,cartesian_lim_x=c(-12,10),cartesian_lim_
                     theme(panel.border = element_blank(),panel.background = element_blank())+
                     theme(panel.grid.minor = element_line(colour = "white"))+
                     theme(legend.position="none")
-          return(PCA_PLOT)
+        return(PCA_PLOT)
 }
 
 # 2.5 Features selection and SVM Model tuning
 SVM_FeatureSel<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
+        ind0<-which(is.na(Table_class_train$predict))
+        if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+        ind<-which(is.na(Table_class_train$predict))
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+        ind1<-grep("\\d",Table_class_train$predict)
+        if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]   
+        Table_class_train<-Table_class_train %>% filter_at(vars(1:20), all_vars(!is.infinite(.)))
         vec<-NULL  
-        for (i in 2:20){
-            print(colnames(Table_class_train[i]))
-            vec.temp<-readLines("Include Feture ? Y/N")
-            vec.temp<-as.character(vec.temp)
-            if (vec.temp=="Y"){
+        for (i in 2:19){
+                print(colnames(Table_class_train[i]))
+                vec.temp<-readline("Include Feture ? Y/N")
+                vec.temp<-as.character(vec.temp)
+                if (vec.temp=="Y"){
                 vec<-c(vec,i)
-            }
-            rm(vec.temp)  
+                }
+                rm(vec.temp)  
         }
-        Table_class_sel<-Table_class_train[,c(vec,-21)]
-        x<-Table_class_sel
-        y<-Table_class_train[,21]
+        Table_class_sel<-Table_class_train[,c(vec,which(colnames(Table_class_train)=="predict"))]
+        x<-Table_class_sel[,-(ncol(Table_class_sel))]
+        y<-Table_class_train$predict
+        pb <- progress_bar$new(total = 100)
         if (kernel_linear){
-          model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
-          }else{
-          model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
-          }
-        return(model)
+                acc<-rep(0,100)
+                for (i in 1:length(acc)){
+                        pb$tick()
+                        TestIndex<-sample(nrow(x),round(nrow(x)/2))
+                        model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
+                        y.pred<-predict(model,x[-TestIndex,])
+                        acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)
+                }
+        }else{
+                acc<-rep(0,100)
+                for (i in 1:length(acc)){
+                        pb$tick()
+                        TestIndex<-sample(nrow(x),round(nrow(x)/2))
+                        model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
+                        y.pred<-predict(model,x[-TestIndex,])
+                        acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)}
+        }
+        model_svm<-list()
+        model_svm[["ACC"]]<-acc
+        model_svm[["Selected_Features"]]<-colnames(x)
+        model_svm[["model"]]<-model
+        return(model_svm)
 }
 
 
 # -------------------------------------------------------------------------
-#' 3. CNN training
+# 3.CNN training
 # -------------------------------------------------------------------------
+# 3.1 single cell images generation and upload
+Image_set_gen<-function(y,x,base_dir,train_dir,validation_dir,test_dir,train_norm_dir,train_swol_dir,validation_norm_dir,
+                        original_dataset_dir_norm,original_dataset_dir_swol,tr.mx,val.mx,tst.mx){
+        #Break the 20x magnification image into single cell images
+        stack<-stackObjects(y,x*intens,ext = c(satck_size,satck_size))
+        #Folders creation 
+        train_dir <- file.path(base_dir, "train")
+        dir.create(train_dir)
+        validation_dir <- file.path(base_dir, "validation")
+        dir.create(validation_dir)
+        test_dir <- file.path(base_dir, "test")
+        dir.create(test_dir)
+        train_norm_dir <- file.path(train_dir, "Norm")
+        dir.create(train_norm_dir)
+        train_swol_dir <- file.path(train_dir, "Swol")
+        dir.create(train_swol_dir)
+        validation_norm_dir <- file.path(validation_dir, "Norm")
+        dir.create(validation_norm_dir)
+        validation_swol_dir <- file.path(validation_dir, "Swol")
+        dir.create(validation_swol_dir)
+        test_swol_dir <- file.path(test_dir, "Swol")
+        dir.create(test_swol_dir)
+        test_norm_dir <- file.path(test_dir, "Norm")
+        dir.create(test_norm_dir)
+        # Transfer all images to the apropriete destenation
+        setwd(original_dataset_dir_norm)
+        fnames <- dir()[grep(".tif",dir())]
+        fnames = sample(fnames)
+        length(fnames)
+        file.copy(file.path(original_dataset_dir_norm, fnames[1:(tr.mx+100)]),
+                  file.path(train_norm_dir))
+        file.copy(file.path(original_dataset_dir_norm, fnames[(tr.mx+100+1):val.mx+200]),
+                  file.path(validation_norm_dir))
+        file.copy(file.path(original_dataset_dir_norm, fnames[(val.mx+200+1):tst.mx+200]),
+                  file.path(test_norm_dir))
+        setwd(original_dataset_dir_swol)
+        fnames <- dir()[grep(".tif",dir())]
+        fnames = sample(fnames)
+        length(fnames)
+        file.copy(file.path(original_dataset_dir_swol, fnames[1:tr.mx]),
+                  file.path(train_swol_dir))
+        file.copy(file.path(original_dataset_dir_swol, fnames[(tr.mx+1):val.mx]),
+                  file.path(validation_swol_dir))
+        file.copy(file.path(original_dataset_dir_swol, fnames[(val.mx+1):(tst.mx)]),
+                  file.path(test_swol_dir))
+        
+        Fimg <- function(x) {
+                x1<-readImage(x, type="tiff")
+                dx <- (dim(x1)[1])
+                dx1 <- dx%/%8
+                ft <- matrix(c(-0.05,-0.02,0, -0.02, -0.05), nrow=5, ncol=5)
+                ft[5,5] <- 2
+                y1 <- filter2(x1, ft)
+                y2 <- y1[(dx1-10):(dx-dx1),(dx1-10):(dx-dx1)]
+                writeImage(y2, paste(x),type = "tiff", bits.per.sample = 8L, compression = "LZW")
+        }
+        
+        setwd(train_dir)
+        setwd(paste(getwd(),"Swol", sep="/"))
+        #dir()
+        tifsS<-dir()[grep(".tif",dir())]
+        lapply(tifsS, Fimg)
+        
+        setwd(train_dir)
+        setwd(paste(getwd(),"Norm",sep="/"))
+        #dir()
+        tifsS<-dir()[grep(".tif",dir())]
+        lapply(tifsS, Fimg)
+        
+        setwd(validation_dir)
+        setwd(paste(getwd(),"Swol",sep="/"))
+        #dir()
+        tifsS<-dir()[grep(".tif$",dir())]
+        lapply(tifsS, Fimg)
+        
+        setwd(validation_dir)
+        setwd(paste(getwd(),"Norm",sep="/"))
+        #dir()
+        tifsS<-dir()[grep(".tif$",dir())]
+        lapply(tifsS, Fimg)
+        
+        
+}
+
+
+# 3.2 CNN build model
+CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch){
+        model <- keras_model_sequential() %>% 
+                layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu", 
+                              input_shape = c(img, img, 1), padding="same") %>%
+                layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>%
+                layer_batch_normalization(momentum = 0.9) %>%
+                layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+                layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_batch_normalization(momentum = 0.9) %>%
+                layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+                layer_conv_2d(filters = 256, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 256, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 256, kernel_size = c(3, 3), activation = "relu") %>%
+                layer_batch_normalization(momentum = 0.9) %>%
+                layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+                layer_conv_2d(filters = 512, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 512, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 512, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_conv_2d(filters = 512, kernel_size = c(3, 3), activation = "relu") %>% 
+                layer_batch_normalization(momentum = 0.9) %>%
+                layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+                layer_flatten() %>% 
+                layer_dense(units = 2048, activation = "relu") %>%
+                layer_dropout(0.2) %>%
+                layer_dense(units = 1, activation = "sigmoid")
+        
+        model %>% compile(
+                loss = "binary_crossentropy",
+                optimizer = optimizer_adam(lr),
+                metrics = c("acc")
+        )
+        
+        train_datagen <- image_data_generator(
+                rescale = 1/255,
+                rotation_range = 90, 
+                fill_mode = "constant",
+                horizontal_flip = TRUE, 
+                zoom_range = 0.25)
+        
+        validation_datagen <- image_data_generator(rescale = 1/255)
+        
+        train_generator <- flow_images_from_directory(
+                train_dir,
+                train_datagen,
+                color_mode = "grayscale",
+                target_size = c(img, img),
+                batch_size = batch.size,
+                class_mode = "binary"
+        )
+        validation_generator <- flow_images_from_directory(
+                validation_dir,
+                validation_datagen,
+                color_mode = "grayscale",
+                target_size = c(img, img),
+                batch_size = batch.size,
+                class_mode = "binary"
+        )
+        
+        train.n = train_generator$n
+        train_step = (train.n%/%batch.size)
+        val.n = validation_generator$n
+        val_step = (val.n%/%batch.size)
+        
+        setwd(base_dir)
+        checkpoint_dir <- "checkpoints_4"
+        dir.create(checkpoint_dir, showWarnings = FALSE)
+        filepath <- file.path(checkpoint_dir, "weights.{epoch:02d}-{val_loss:.2f}.hdf5")
+        
+        # Create checkpoint callback
+        cp_callback <- callback_model_checkpoint(
+                filepath = filepath,
+                save_weights_only = FALSE,
+                period = 3,
+                verbose = 1
+        )
+        
+        history <- model %>% fit_generator(
+                train_generator,
+                steps_per_epoch =train_step,
+                epochs = epoch,
+                validation_data = validation_generator,
+                validation_steps = val_step,
+                callbacks = list(cp_callback), 
+                verbose = 1, 
+                workers = 10
+        )
+        
+        
+        
+        model_h5<-save_model_hdf5(model, "mito_model_4.h5")
+        return(model_h5)
+        
+        
+        
+}
+
+
 
 
 # -------------------------------------------------------------------------
 #' 4. Deployment example
 # -------------------------------------------------------------------------
 #' 4.1 SVM
-maskGen_deploySVM<-function(x,y,model,Table_class_train,label_class="Postive",erode_mask=T,opensize=9){
+maskGen_deploySVM<-function(x,y,model,Table_class_train,label_class="Postive",erode_mask=T,opensize=9,Sel=TRUE,Selected_Features,TH){
+        ind<- which(colnames(Table_class_train) %in% "predict")
+        if (length(ind) > 0) {
+        Table_class_train<-Table_class_train[,-ind]
+        }
+        if (Sel){
+        Table_class_train<-Table_class_train[,which(colnames(Table_class_train) %in% Selected_Features)]
+        }
         y.pred<-predict(model,Table_class_train, decision.values = T)
         if (label_class=="Postive"){
                 Target_class<-"P"
@@ -315,17 +555,18 @@ maskGen_deploySVM<-function(x,y,model,Table_class_train,label_class="Postive",er
                 Target_class<-"N"
                 noTarget_class<-"P"    
         }
-        d=attr(y.pred,"decision.values")
+        d=attr(y.pred,"decision.values")[1:nrow(Table_class_train),1]
         new.y.pred=rep(noTarget_class,length(y.pred))
-        NewCutoff=0
-        new.y.pred[d<NewCutoff]=Target_class
+        NewCutoff=TH
+        new.y.pred[d>NewCutoff]=Target_class
         d<-round(d,1)
-        Table_class_train$pred<-as.array(new.y.pred)
-        ir = which(Table_class_train$pred %in% noTarget_class) 
+        table_pred<-Table_class_train
+        table_pred$pred<-as.array(new.y.pred)
+        ir = which(table_pred$pred %in% noTarget_class) 
         x = rmObjects(x, ir) 
-        nr = which(Ts.mix$pred %in% noTarget_class) 
+        nr = which(table_pred$pred %in% noTarget_class) 
         y = rmObjects(y, nr) 
-        if (length(nr) == length(Table_class_train$pred)){
+        if (length(nr) == length(table_pred$pred)){
                stop("no classifed cells were detected")
         }
         if (erode_mask){
@@ -334,7 +575,11 @@ maskGen_deploySVM<-function(x,y,model,Table_class_train,label_class="Postive",er
         }else{
                 y.mask_bin<- thresh(y) 
         }
-        return(y.mask_bin)
+        call_mask<-list()
+        call_mask[["decision_values"]]<-d
+        call_mask[["table"]]<-table_pred
+        call_mask[["mask"]]<-y.mask_bin
+        return(call_mask)
 }
 
 #' 4.2 CNN
