@@ -435,7 +435,7 @@ Image_set_gen<-function(y,x,base_dir,train_dir,validation_dir,test_dir,train_nor
 
 
 # 3.2 CNN build model
-CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch){
+CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_size){
         model <- keras_model_sequential() %>% 
                 layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu", 
                               input_shape = c(img, img, 1), padding="same") %>%
@@ -481,7 +481,7 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch){
                 train_dir,
                 train_datagen,
                 color_mode = "grayscale",
-                target_size = c(img, img),
+                target_size = c(img_size, img_size),
                 batch_size = batch.size,
                 class_mode = "binary"
         )
@@ -489,7 +489,7 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch){
                 validation_dir,
                 validation_datagen,
                 color_mode = "grayscale",
-                target_size = c(img, img),
+                target_size = c(img_size, img_size),
                 batch_size = batch.size,
                 class_mode = "binary"
         )
@@ -523,17 +523,37 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch){
                 workers = 10
         )
         
-        
-        
-        model_h5<-save_model_hdf5(model, "mito_model_4.h5")
-        return(model_h5)
-        
-        
-        
+        model_h5<-save_model_hdf5(model, "mito_model_4.h5")    
+        ##Do we need this if they are saving the model at every X checkpoint? If we are keepint the checkpoint funcitonality I also think we need to include a test for choosing the best model--see section 3.3 
+        return(model_h5) ##If we add the test for best model I think this function would return nothing? Since the checkpoint files are being saved in the function.. there's nothing to return ?
+     
 }
 
-
-
+#' 3.3 Choose best model from checkpoints 
+best_model <- function(test_dir, img_size) {
+        test_datagen <- image_data_generator(rescale = 1/255)
+        test_generator <- flow_images_from_directory(
+                test_dir,
+                test_datagen,
+                target_size = c(img_size, img_size), 
+                color_mode = "grayscale",
+                batch_size = 1, 
+                class_mode = NULL, 
+                s  
+}
+test_data <- function(test_dir, img_size) {
+        test_datagen <- image_data_generator(rescale = 1/255)
+        test_generator <- flow_images_from_directory(
+                test_dir,
+                test_datagen,
+                target_size = c(img_size, img_size), 
+                color_mode = "grayscale",
+                batch_size = 1, 
+                class_mode = NULL, 
+                shuffle = FALSE
+        )
+        return(test_generator)
+}
 
 # -------------------------------------------------------------------------
 #' 4. Deployment example
@@ -649,8 +669,119 @@ maskGen_deployCNN<-function(x,y,z,intens=20,satck_size=200,input_size=61,predict
 #' 5.confusion matrix and ROC curve 
 # -------------------------------------------------------------------------
 
+#' 5.1 Test data prep 
+test_data <- function(test_dir, img_size) {
+        test_datagen <- image_data_generator(rescale = 1/255)
+        test_generator <- flow_images_from_directory(
+                test_dir,
+                test_datagen,
+                target_size = c(img_size, img_size), 
+                color_mode = "grayscale",
+                batch_size = 1, 
+                class_mode = NULL, 
+                shuffle = FALSE
+        )
+        return(test_generator)
+}
+
+#' 5.2 Load model, Make predictions
+test_predict <- function(model_file) {
+        
+}
+
+#' 5.2 CM
+
+CM <- function(x, ) {
+        
+        
+        
+        df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
+                rename(
+                        predict_proba = V1,
+                        filename = V2
+                ) %>%
+                mutate(predict_proba = as.numeric(predict_proba)) %>%
+                mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
+                mutate(predicted_label = as.integer(predicted_label)) %>%
+                mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
+                separate(filename, into=c("true_label","fname"), sep = "[//]" )
+        cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
+        return(cm)
+}
 
 
+
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(caret)
+
+
+CM <- function(x){
+        df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
+                rename(
+                        predict_proba = V1,
+                        filename = V2
+                ) %>%
+                mutate(predict_proba = as.numeric(predict_proba)) %>%
+                mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
+                mutate(predicted_label = as.integer(predicted_label)) %>%
+                mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
+                separate(filename, into=c("true_label","fname"), sep = "[//]" )
+        cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
+        return(cm)
+}
+
+fnames <- dir()
+dfL <- list()
+for (i in 37:length(fnames)) {
+        model <- load_model_hdf5(fnames[i], custom_objects = c("sensitivity"=custom, "specificity"= custom2))
+        pred = predict_generator(model, test_generator, steps=(n))
+        cm <- CM(pred)
+        acc <- cm$overall[[1]]
+        nam <- paste(fnames[i])
+        df <- data.frame(nam, acc)
+        dfL[[i]] <- df
+        print(i)
+}
+
+
+#' 5.4 ROC 
+library("e1071")
+library("dplyr")
+library("data.table")
+library("gtools")
+library("yaImpute")
+library("tidyr")
+library(stringr)
+library(caret)
+library(ROCR)
+pred = prediction(df$predict_proba, df$true_label)
+perf = performance(pred, measure="tpr", x.measure="fpr")
+plot(perf, colorize=TRUE, add=FALSE)
+perf2 = performance(pred, measure="acc", x.measure="cutoff")
+plot(perf2, add=FALSE)
+perf3 = performance(pred, measure="prec", x.measure="rec")
+plot(perf3, add=FALSE, colorize=TRUE)
+perf4 <- performance(pred, "acc")
+plot(perf4, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1))
+perf5 <- performance(pred, "cost")
+plot(perf5)
+perf5 <- performance(pred, "ecost")
+plot(perf5)
+threshold1 <- function(predict, response) {
+        perf <- performance(pred, "sens", "spec")
+        df <- data.frame(cut = perf@alpha.values[[1]], sens = perf@x.values[[1]], spec = perf@y.values[[1]])
+        df[which.max(df$sens + df$spec), "cut"]
+}
+thr = threshold1(pred)
+print(thr)
+
+plot(0,0,type="n", xlim= c(0,1), ylim= c(0,500), xlab="Prediction", ylab="Density")
+for (i in 1:length(pred@predictions)) { 
+        lines(density(subset(pred@predictions[[i]], pred@labels[[i]] == "0")), col= "red")
+        lines(density(subset(pred@predictions[[i]], pred@labels[[i]] == "1")), col="green") }
 
 
 
