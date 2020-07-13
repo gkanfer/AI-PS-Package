@@ -435,7 +435,7 @@ Image_set_gen<-function(y,x,base_dir,train_dir,validation_dir,test_dir,train_nor
 
 
 # 3.2 CNN build model
-CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_size){
+CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_size, checkpoint_dir){
         model <- keras_model_sequential() %>% 
                 layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu", 
                               input_shape = c(img, img, 1), padding="same") %>%
@@ -499,8 +499,6 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_
         val.n = validation_generator$n
         val_step = (val.n%/%batch.size)
         
-        setwd(base_dir)
-        checkpoint_dir <- "checkpoints_4"
         dir.create(checkpoint_dir, showWarnings = FALSE)
         filepath <- file.path(checkpoint_dir, "weights.{epoch:02d}-{val_loss:.2f}.hdf5")
         
@@ -523,6 +521,8 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_
                 workers = 10
         )
         
+        ##Add save history plot (as png) or just let them save from Rstudio plot output during training?
+        
         model_h5<-save_model_hdf5(model, "mito_model_4.h5")    
         ##Do we need this if they are saving the model at every X checkpoint? If we are keepint the checkpoint funcitonality I also think we need to include a test for choosing the best model--see section 3.3 
         return(model_h5) ##If we add the test for best model I think this function would return nothing? Since the checkpoint files are being saved in the function.. there's nothing to return ?
@@ -530,7 +530,7 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_
 }
 
 #' 3.3 Choose best model from checkpoints 
-best_model <- function(test_dir, img_size) {
+best_model <- function(test_dir, img_size, model_dir) {
         test_datagen <- image_data_generator(rescale = 1/255)
         test_generator <- flow_images_from_directory(
                 test_dir,
@@ -539,21 +539,33 @@ best_model <- function(test_dir, img_size) {
                 color_mode = "grayscale",
                 batch_size = 1, 
                 class_mode = NULL, 
-                s  
-}
-test_data <- function(test_dir, img_size) {
-        test_datagen <- image_data_generator(rescale = 1/255)
-        test_generator <- flow_images_from_directory(
-                test_dir,
-                test_datagen,
-                target_size = c(img_size, img_size), 
-                color_mode = "grayscale",
-                batch_size = 1, 
-                class_mode = NULL, 
-                shuffle = FALSE
+                shuffle=FALSE
         )
-        return(test_generator)
+        setwd(model_dir)
+        fnames <- dir()
+        dfL <- list()
+        modelfiles<- function(x) {
+                model <- load_model_hdf5(x)
+                pred = predict_generator(model, test_generator, steps=(n))
+                cm <- CM(pred)
+                acc <- cm$overall[[1]]
+                nam <- paste(fnames[i])
+                df <- data.frame(nam, acc)
+                return(df)
+        }
+        for (i in 1:length(fnames)) {
+                model <- load_model_hdf5(fnames[i], custom_objects = c("sensitivity"=custom, "specificity"= custom2))
+                pred = predict_generator(model, test_generator, steps=(n))
+                cm <- CM(pred)
+                acc <- cm$overall[[1]]
+                nam <- paste(fnames[i])
+                df <- data.frame(nam, acc)
+                dfL[[i]] <- df
+                print(i)
+        }
+        
 }
+
 
 # -------------------------------------------------------------------------
 #' 4. Deployment example
