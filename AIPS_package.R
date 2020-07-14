@@ -788,35 +788,11 @@ confusion_matrix <- function(df) {
 }
 
 #' 5.4 ROC 
-
-pred = prediction(df$predict_proba, df$true_label)
-perf = performance(pred, measure="tpr", x.measure="fpr")
-plot(perf, colorize=TRUE, add=FALSE)
-perf2 = performance(pred, measure="acc", x.measure="cutoff")
-plot(perf2, add=FALSE)
-perf3 = performance(pred, measure="prec", x.measure="rec")
-plot(perf3, add=FALSE, colorize=TRUE)
-perf4 <- performance(pred, "acc")
-plot(perf4, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1))
-perf5 <- performance(pred, "cost")
-plot(perf5)
-perf5 <- performance(pred, "ecost")
-plot(perf5)
-threshold1 <- function(predict, response) {
-        perf <- performance(pred, "sens", "spec")
-        df <- data.frame(cut = perf@alpha.values[[1]], sens = perf@x.values[[1]], spec = perf@y.values[[1]])
-        df[which.max(df$sens + df$spec), "cut"]
+roc_curve <- function(df) {
+        pred = prediction(df$predict_proba, df$true_label)  
+        perf = performance(pred, measure="tpr", x.measure="fpr")
+        return(plot(perf, col=rainbow(10)))
 }
-thr = threshold1(pred)
-print(thr)
-
-plot(0,0,type="n", xlim= c(0,1), ylim= c(0,500), xlab="Prediction", ylab="Density")
-for (i in 1:length(pred@predictions)) { 
-        lines(density(subset(pred@predictions[[i]], pred@labels[[i]] == "0")), col= "red")
-        lines(density(subset(pred@predictions[[i]], pred@labels[[i]] == "1")), col="green") }
-
-
-
 
 
 
