@@ -523,9 +523,10 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_
         
         ##Add save history plot (as png) or just let them save from Rstudio plot output during training?
         
-        model_h5<-save_model_hdf5(model, "mito_model_4.h5")    
+        #model_h5<-save_model_hdf5(model, "mito_model_4.h5")    
         ##Do we need this if they are saving the model at every X checkpoint? If we are keepint the checkpoint funcitonality I also think we need to include a test for choosing the best model--see section 3.3 
-        return(model_h5) ##If we add the test for best model I think this function would return nothing? Since the checkpoint files are being saved in the function.. there's nothing to return ?
+        #return(model_h5) 
+        ##If we add the test for best model I think this function should instead return nothing? Since the checkpoint files are being saved in the function.. there's nothing to return ?
      
 }
 
@@ -542,7 +543,7 @@ best_model <- function(test_dir, img_size, checkpoint_dir) {
                 shuffle=FALSE
         )
         
-        
+        n = test_generator$n
         CM <- function(x){
                 df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
                         rename(
@@ -560,8 +561,7 @@ best_model <- function(test_dir, img_size, checkpoint_dir) {
         
         setwd(checkpoint_dir)
         fnames <- dir()
-        
-        df_modelfiles<- function(x) {
+        df_test<- function(x) {
                 model <- load_model_hdf5(x)
                 pred = predict_generator(model, test_generator, steps=(n))
                 cm <- CM(pred)
@@ -570,17 +570,20 @@ best_model <- function(test_dir, img_size, checkpoint_dir) {
                 df <- data.frame(nam, acc)
                 return(df)
         }
-        for (i in 1:length(fnames)) {
-                model <- load_model_hdf5(fnames[i], custom_objects = c("sensitivity"=custom, "specificity"= custom2))
-                pred = predict_generator(model, test_generator, steps=(n))
-                cm <- CM(pred)
-                acc <- cm$overall[[1]]
-                nam <- paste(fnames[i])
-                df <- data.frame(nam, acc)
-                dfL[[i]] <- df
-                print(i)
-        }
         
+        dfL <- lapply(fnames, FUN=df_test)
+        df <- rbind_list(dfL)
+        for (i in 1:nrow(df)) {
+                nam <- df$nam[[i]]
+                nam2 <- unlist(strsplit(unlist(strsplit(nam, split="[-]")), split="[.]"))
+                df$epoch[[i]] <- nam2[2]}
+        df$epoch <- as.numeric(df$epoch)
+        ggplot(df, aes(x=epoch, y=acc)) + geom_point()
+        bestmodel_file = which(df$acc==max(df$acc))
+        print(paste0("The best model file is: ", best_model_file, "with an accuracy of:", max(df$acc)))
+        
+        best_model<- load_model_hdf5(best_model_file)
+        return(best_model)
 }
 
 
@@ -777,15 +780,7 @@ for (i in 37:length(fnames)) {
 
 
 #' 5.4 ROC 
-library("e1071")
-library("dplyr")
-library("data.table")
-library("gtools")
-library("yaImpute")
-library("tidyr")
-library(stringr)
-library(caret)
-library(ROCR)
+
 pred = prediction(df$predict_proba, df$true_label)
 perf = performance(pred, measure="tpr", x.measure="fpr")
 plot(perf, colorize=TRUE, add=FALSE)
