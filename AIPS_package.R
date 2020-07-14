@@ -701,8 +701,9 @@ maskGen_deployCNN<-function(x,y,z,intens=20,satck_size=200,input_size=61,predict
 #' 5.confusion matrix and ROC curve 
 # -------------------------------------------------------------------------
 
-#' 5.1 Test data prep 
-test_data <- function(test_dir, img_size) {
+#' 5.1 Load model, test data, make predictions
+
+model_predict <- function(test_dir, img_size, bestmodelfile) {
         test_datagen <- image_data_generator(rescale = 1/255)
         test_generator <- flow_images_from_directory(
                 test_dir,
@@ -711,73 +712,80 @@ test_data <- function(test_dir, img_size) {
                 color_mode = "grayscale",
                 batch_size = 1, 
                 class_mode = NULL, 
-                shuffle = FALSE
+                shuffle=FALSE
         )
-        return(test_generator)
-}
-
-#' 5.2 Load model, Make predictions
-test_predict <- function(model_file) {
-        
-}
-
-#' 5.2 CM
-
-CM <- function(x, ) {
-        
-        
-        
-        df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
-                rename(
-                        predict_proba = V1,
-                        filename = V2
-                ) %>%
-                mutate(predict_proba = as.numeric(predict_proba)) %>%
-                mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
-                mutate(predicted_label = as.integer(predicted_label)) %>%
-                mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
-                separate(filename, into=c("true_label","fname"), sep = "[//]" )
-        cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
-        return(cm)
-}
-
-
-
-library(tibble)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(caret)
-
-
-CM <- function(x){
-        df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
-                rename(
-                        predict_proba = V1,
-                        filename = V2
-                ) %>%
-                mutate(predict_proba = as.numeric(predict_proba)) %>%
-                mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
-                mutate(predicted_label = as.integer(predicted_label)) %>%
-                mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
-                separate(filename, into=c("true_label","fname"), sep = "[//]" )
-        cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
-        return(cm)
-}
-
-fnames <- dir()
-dfL <- list()
-for (i in 37:length(fnames)) {
-        model <- load_model_hdf5(fnames[i], custom_objects = c("sensitivity"=custom, "specificity"= custom2))
+        n = test_generator$n
+        model <- load_model_hdf5(bestmodelfile)
         pred = predict_generator(model, test_generator, steps=(n))
-        cm <- CM(pred)
-        acc <- cm$overall[[1]]
-        nam <- paste(fnames[i])
-        df <- data.frame(nam, acc)
-        dfL[[i]] <- df
-        print(i)
+        df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
+                rename(predict_proba = V1, filename = V2) %>%
+                mutate(predict_proba = as.numeric(predict_proba)) %>%
+                mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
+                mutate(predicted_label = as.integer(predicted_label)) %>%
+                mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
+                separate(filename, into=c("true_label","fname"), sep = "[//]" )
+        return(df)
 }
 
+#'5.2 CM
+confusion_matrix <- function(df) {
+        cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
+        draw_confusion_matrix <- function(cm) {
+                total <- sum(cm$table)
+                res <- as.numeric(cm$table)
+                # Generate color gradients. Palettes come from RColorBrewer.
+                greenPalette <- c("#F7FCF5","#E5F5E0","#C7E9C0","#A1D99B","#74C476","#41AB5D","#238B45","#006D2C","#00441B")
+                redPalette <- c("#FFF5F0","#FEE0D2","#FCBBA1","#FC9272","#FB6A4A","#EF3B2C","#CB181D","#A50F15","#67000D")
+                getColor <- function (greenOrRed = "green", amount = 0) {
+                        if (amount == 0)
+                                return("#FFFFFF")
+                        palette <- greenPalette
+                        if (greenOrRed == "red")
+                                palette <- redPalette
+                        colorRampPalette(palette)(100)[10 + ceiling(90 * amount / total)]
+                }
+                # set the basic layout
+                layout(matrix(c(1,1,2)))
+                par(mar=c(2,2,2,2))
+                plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+                title('CONFUSION MATRIX', cex.main=2)
+                # create the matrix 
+                classes = colnames(cm$table)
+                rect(150, 430, 240, 370, col=getColor("green", res[1]))
+                text(195, 435, classes[1], cex=2)
+                rect(250, 430, 340, 370, col=getColor("red", res[3]))
+                text(295, 435, classes[2], cex=2)
+                text(125, 370, 'Predicted', cex=2, srt=90, font=2)
+                text(245, 450, 'Actual', cex=2, font=2)
+                rect(150, 305, 240, 365, col=getColor("red", res[2]))
+                rect(250, 305, 340, 365, col=getColor("green", res[4]))
+                text(140, 400, classes[1], cex=2, srt=90)
+                text(140, 335, classes[2], cex=2, srt=90)
+                # add in the cm results
+                text(195, 400, res[1], cex=2.5, font=2, col='black')
+                text(195, 335, res[2], cex=2.5, font=2, col='black')
+                text(295, 400, res[3], cex=2.5, font=2, col='black')
+                text(295, 335, res[4], cex=2.5, font=2, col='black')
+                # add in the specifics 
+                plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
+                text(10, 85, names(cm$byClass[1]), cex=1.5, font=2)
+                text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.3)
+                text(30, 85, names(cm$byClass[2]), cex=1.5, font=2)
+                text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.3)
+                text(50, 85, names(cm$byClass[5]), cex=1.5, font=2)
+                text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.3)
+                text(70, 85, names(cm$byClass[6]), cex=1.5, font=2)
+                text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.3)
+                text(90, 85, names(cm$byClass[7]), cex=1.5, font=2)
+                text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.3)
+                # add in the accuracy information 
+                text(30, 35, names(cm$overall[1]), cex=1.7, font=2)
+                text(30, 20, round(as.numeric(cm$overall[1]), 3), cex=1.7)
+                text(70, 35, names(cm$overall[2]), cex=1.7, font=2)
+                text(70, 20, round(as.numeric(cm$overall[2]), 3), cex=1.7)
+        }
+        return(draw_confusion_matrix(cm))     
+}
 
 #' 5.4 ROC 
 
