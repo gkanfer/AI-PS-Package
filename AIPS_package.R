@@ -530,7 +530,7 @@ CNN_build_model<-function(batch.size,img,lr,train_dir,validation_dir,epoch, img_
 }
 
 #' 3.3 Choose best model from checkpoints 
-best_model <- function(test_dir, img_size, model_dir) {
+best_model <- function(test_dir, img_size, checkpoint_dir) {
         test_datagen <- image_data_generator(rescale = 1/255)
         test_generator <- flow_images_from_directory(
                 test_dir,
@@ -541,15 +541,32 @@ best_model <- function(test_dir, img_size, model_dir) {
                 class_mode = NULL, 
                 shuffle=FALSE
         )
-        setwd(model_dir)
+        
+        
+        CM <- function(x){
+                df <- as.tibble(cbind(pred, test_generator$filenames)) %>%
+                        rename(
+                                predict_proba = V1,
+                                filename = V2
+                        ) %>%
+                        mutate(predict_proba = as.numeric(predict_proba)) %>%
+                        mutate(predicted_label = ifelse(predict_proba > 0.5, 1, 0)) %>%
+                        mutate(predicted_label = as.integer(predicted_label)) %>%
+                        mutate(predicted_label_name = ifelse(predicted_label == 0, "Norm", "Swol")) %>%
+                        separate(filename, into=c("true_label","fname"), sep = "[//]" )
+                cm <- confusionMatrix(as.factor(df$predicted_label_name), as.factor(df$true_label), positive = "Swol")
+                return(cm)
+        }
+        
+        setwd(checkpoint_dir)
         fnames <- dir()
-        dfL <- list()
-        modelfiles<- function(x) {
+        
+        df_modelfiles<- function(x) {
                 model <- load_model_hdf5(x)
                 pred = predict_generator(model, test_generator, steps=(n))
                 cm <- CM(pred)
                 acc <- cm$overall[[1]]
-                nam <- paste(fnames[i])
+                nam <- paste(x)
                 df <- data.frame(nam, acc)
                 return(df)
         }
