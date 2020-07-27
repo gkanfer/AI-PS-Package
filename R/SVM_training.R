@@ -8,34 +8,38 @@ extractFeatures <- function(x, mask_cyto, label_class="Positive") {
   table_moment = EBImage::computeFeatures.moment(mask_cyto,x)
   table_basic = EBImage::computeFeatures.basic(mask_cyto,x)
   table_test <- as.data.frame(cbind(table_basic,table_moment,table_shape))
-  #! what is purpose of rownames, table restructuring ?
-  rownameTable<-row.names(table_test)
-  table_test$predict<-label_class
-  feature_table<-data.frame(cbind(rownameTable,table_test))
-  #Ts.mix<-feature_table[,2:20]
-  rowNameTable<-feature_table[,1]
-  #Ts.mix$predict<-label_class
-  #Features_Table<-list()
-  #Features_Table[["Ts.mix"]]<-Ts.mix
-  #Features_Table[["rowNameTable"]]<-rowNameTable
-  return(list(table=feature_table, names=rowNameTable))
+  table_test$predict <- label_class #what is the point of this? Won't the predict column be filled in during pickCells function?
+  return(table_test)
+  
+  # #! what is purpose of rownames, table restructuring ?
+  # rownameTable<-row.names(table_test)
+  # #table_test$predict<-label_class
+  # feature_table<-data.frame(cbind(rownameTable,table_test))
+  # Ts.mix<-feature_table[,2:20]
+  # rowNameTable<-feature_table[,1]
+  # Ts.mix$predict<-label_class
+  # Features_Table<-list()
+  # Features_Table[["Ts.mix"]]<-Ts.mix
+  # Features_Table[["rowNameTable"]]<-rowNameTable
+  # #return(list(table=feature_table, names=rowNameTable))
+  # return(Features_Table)
 }
 
 #' 2.2 Choose cells for classification
 #' @param
 #' @return
 #' @export
-pickCells<-function(mask_nuc, xy, Ts.mix,int, parameters_nuc, font_size=0.7, label_class="Postive", Mdisplay_select=TRUE) {
-  seg_disp = paintObjects(mask_nuc, toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
+pickCells<-function(mask_nuc, x, xy, Ts.mix, int, parameters_nuc, font_size=0.7, label_class="Postive", display_select=TRUE) {
+  seg_disp = EBImage::paintObjects(mask_nuc, EBImage::toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
   display(seg_disp,"raster")
   celltext = text(x=xy[,1], y= parameters_nuc[,2], labels="", col="yellow", cex=font_size)
   c<-0
   readline(paste0("Select", label_class, "cells"))
   temp<-locator()
   c<-c(c,temp)
-  xy<-computeFeatures.moment(mask_nuc)[,c('m.cx','m.cy')]
+  xy<-EBImage::computeFeatures.moment(mask_nuc)[,c('m.cx','m.cy')]
   df.c <- cbind(c$x,c$y)
-  knn.out <- ann(as.matrix(xy), as.matrix(df.c), k=2)
+  knn.out <- yaImpute::ann(as.matrix(xy), as.matrix(df.c), k=2)
   row_numb<-knn.out$knnIndexDist
   class(row_numb)
   row_numb<-as.data.frame(row_numb)
@@ -51,13 +55,13 @@ pickCells<-function(mask_nuc, xy, Ts.mix,int, parameters_nuc, font_size=0.7, lab
   
   Table_class<-list()
   if (display_select) {
-    seg.temp = rmObjects(mask_nuc, nr)
-    seg_class_sel = paintObjects(seg.temp,toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
+    seg.temp = EBImage::rmObjects(mask_nuc, nr)
+    seg_class_sel = EBImage::paintObjects(seg.temp,EBImage::toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
   }
   return(list(table_train=Ts.mix, segsel=seg_class_sel))
 } 
 
-##! How to train with multiple images?
+##! How to train with multiple images? Let user make their own loop using segmentNuc -> segmentCyto -> pickCells ? Loop would need to return a single table for all images in order to work with current modelSVM function
 
 #'2.3 SVM model 
 #' @param 
