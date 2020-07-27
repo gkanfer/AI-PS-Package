@@ -8,21 +8,19 @@ extractFeatures <- function(x, mask_cyto, label_class="Positive") {
   table_moment = EBImage::computeFeatures.moment(mask_cyto,x)
   table_basic = EBImage::computeFeatures.basic(mask_cyto,x)
   table_test <- as.data.frame(cbind(table_basic,table_moment,table_shape))
-  table_test$predict <- label_class #what is the point of this? Won't the predict column be filled in during pickCells function?
-  return(table_test)
-  
+  #table_test$predict <- label_class 
   # #! what is purpose of rownames, table restructuring ?
-  # rownameTable<-row.names(table_test)
-  # #table_test$predict<-label_class
-  # feature_table<-data.frame(cbind(rownameTable,table_test))
-  # Ts.mix<-feature_table[,2:20]
-  # rowNameTable<-feature_table[,1]
-  # Ts.mix$predict<-label_class
-  # Features_Table<-list()
-  # Features_Table[["Ts.mix"]]<-Ts.mix
-  # Features_Table[["rowNameTable"]]<-rowNameTable
-  # #return(list(table=feature_table, names=rowNameTable))
-  # return(Features_Table)
+  rownameTable<-row.names(table_test)
+  #table_test$predict<-label_class
+  feature_table<-data.frame(cbind(rownameTable,table_test))
+  Ts.mix<-feature_table[,2:20]
+  rowNameTable<-feature_table[,1]
+  Ts.mix$predict<-label_class #what is the point of this? Won't the predict column be filled in during pickCells function?
+  Features_Table<-list()
+  Features_Table[["Ts.mix"]]<-Ts.mix
+  Features_Table[["rowNameTable"]]<-rowNameTable
+  #return(list(table=feature_table, names=rowNameTable))
+  return(Features_Table)
 }
 
 #' 2.2 Choose cells for classification

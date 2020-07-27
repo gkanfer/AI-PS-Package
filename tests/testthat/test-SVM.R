@@ -7,7 +7,7 @@ test_that("Extract features works", {
   cseg = segmentCyto(img, nseg$seg, index=3, int=10, filter_size=100,
                      offset=0.01, size_smooth=19, opensize=7, largeobj=100000, minmaxnorm=TRUE)
   table = extractFeatures(img, cseg$seg)
-  expect(nrow(table)>3)
+  expect(nrow(table$Ts.mix)>3)
 })
 
 # test_that("Cell selection/classification runs without error", {
