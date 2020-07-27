@@ -27,7 +27,7 @@ extractFeatures <- function(x, mask_cyto, label_class="Positive") {
 #' @param
 #' @return
 #' @export
-pickCells<-function(mask_nuc, x, xy, Ts.mix, int, parameters_nuc, font_size=0.7, label_class="Postive", display_select=TRUE) {
+pickCells<-function(mask_nuc, x, xy, xy_nuc, Ts.mix, int, font_size=0.7, label_class="Postive", display_select=TRUE) {
   seg_disp = EBImage::paintObjects(mask_nuc, EBImage::toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
   display(seg_disp,"raster")
   celltext = text(x=xy[,1], y= parameters_nuc[,2], labels="", col="yellow", cex=font_size)
