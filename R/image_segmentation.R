@@ -76,18 +76,19 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   cf_Area<-data.frame(cf[,1])
   cf_Area$num=row.names(cf_Area)
   ci=which(cf[,1]>largeobj)
-  cseg=EBImage::rmObjects(cseg, ci, reenumerate=FALSE)
+  cseg2=EBImage::rmObjects(cseg, ci, reenumerate=FALSE)
 
   #? what is this doing?
   xy.nseg<-as.numeric(row.names(EBImage::computeFeatures.moment(y)[,c('m.cx', 'm.cy')]))
-  xy.cseg<- as.numeric(row.names(EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]))
+  xy.cseg<- as.numeric(row.names(EBImage::computeFeatures.moment(cseg2)[,c('m.cx', 'm.cy')]))
   ind.diff <- setdiff(xy.nseg, xy.cseg)
   nseg<-EBImage::rmObjects(y, ind.diff, reenumerate=F)
   #nseg=reenumerate(nseg) #! I can't find this function do you mean enumerate?
   #cseg=reenumerate(cseg)
   xy.nseg_table<-EBImage::computeFeatures.moment(nseg)[,c('m.cx', 'm.cy')]
   xy.cseg_table<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
-  return(list(nuc_seg=nseg, xy_nuc=xy.nseg_table, seg=cseg, xy_cseg=xy.cseg_table))
+  # return(list(seg=cseg, nuc_seg=nseg, cytoch=cyto_norm))
+  return(list(nuc_seg=nseg, xy_nuc=xy.nseg_table, seg=cseg2, xy_cseg=xy.cseg_table, norm=cyto_norm))
 }
 
 ###Internal Functions###
