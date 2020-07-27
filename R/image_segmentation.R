@@ -38,7 +38,7 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
     if (length(tp)<1) {
       stop("Outlier detection failed")
     }
-    nseg<-rmObjects(nseg,tp)
+    nseg<-EBImage::rmObjects(nseg,tp)
   }
   dfshape<-EBImage::computeFeatures.shape(nseg)
   xy<-EBImage::computeFeatures.moment(nseg)[,c('m.cx', 'm.cy')]
