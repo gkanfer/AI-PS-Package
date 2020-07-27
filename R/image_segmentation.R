@@ -48,7 +48,6 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
     seg_CH1mask2 = EBImage::paintObjects(mask_nuc,EBImage::toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
     seg_mask<-EBImage::paintObjects(nseg,EBImage::toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
   }
-
   return(list(seg=nseg, features=xy, mask_start=seg_CH1mask2, mask_final=seg_mask))
 }
 
@@ -71,8 +70,8 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   combine[y>combine]=y[y>combine]
   cseg<-EBImage::propagate(cyto_smooth, y, lambda=1e-2, mask=combine)
   cseg=EBImage::fillHull(cseg)
-  #xy<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
-  #chkpt(xy)
+  xy<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
+  chkpt(xy)
   cf<-EBImage::computeFeatures.shape(cseg)
   cf_Area<-data.frame(cf[,1])
   cf_Area$num=row.names(cf_Area)
@@ -84,7 +83,7 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   xy.cseg<- as.numeric(row.names(EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]))
   ind.diff <- setdiff(xy.nseg, xy.cseg)
   nseg<-EBImage::rmObjects(y, ind.diff, reenumerate=F)
-  #nseg=reenumerate(nseg) #I can't find this function
+  #nseg=reenumerate(nseg) #! I can't find this function do you mean enumerate?
   #cseg=reenumerate(cseg)
   xy.nseg_table<-EBImage::computeFeatures.moment(nseg)[,c('m.cx', 'm.cy')]
   xy.cseg_table<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
