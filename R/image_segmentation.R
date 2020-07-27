@@ -2,13 +2,20 @@
 #' @param image EBImage object
 #' @param index select which channel (1=ch1, 2=ch2..) integer value
 #' @param minmaxnorm whether or not to normalize each channel by min/max intensity (TRUE or FALSE)
-#' @param
-#'
-#' @return
+#' @param int intensity of image (integer)
+#' @param filter_size size (x and y) of threshold window
+#' @param offset ?
+#' @param opensize ?
+#' @param small_obj Integer, all objects smaller than value are removed 
+#' @param use_watershed TRUE/FALSE, whether to use EBImage watershed for segmenting, instead of simpler bwlabel function
+#' @param distmap_value If watershed=TRUE, edge sensitivity of segmentation
+#' @param rm_outliers TRUE/FALSE ?
+#' @param out_p=?
+#' @return list: segmented nuclei mask, xy features, (display masks on image)
 #' @export
 segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
                            int=2, filter_size=16, offset=0.04, opensize=3,
-                           small_obj=30, use_watershed=TRUE, distmap_value=2,
+                           small_obj=30, use_watershed=FALSE, distmap_value=2,
                            rm_outliers=TRUE, out_p=0.95, displaymasks=TRUE) {
   norm_nuc <- norm_ch(image=image, index=index, minmaxnorm=minmaxnorm)
   mask_nuc <- mask_ch(norm_nuc, filter_size, offset, opensize, shape="diamond")
@@ -38,8 +45,8 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
   ##chkpt2(xy)
 
   if (displaymasks){
-    seg_CH1mask2 = paintObjects(mask_nuc,toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
-    seg_mask<-paintObjects(nseg,toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
+    seg_CH1mask2 = EBImage::paintObjects(mask_nuc,EBImage::toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
+    seg_mask<-EBImage::paintObjects(nseg,EBImage::toRGB(norm_nuc),opac=c(1, 1),col=c("red",NA),thick=TRUE,closed=TRUE)
   }
 
   return(list(seg=nseg, features=xy, mask_start=seg_CH1mask2, mask_final=seg_mask))
@@ -55,15 +62,15 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
 segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_smooth=19,
                    opensize=7, largeobj=30000, minmaxnorm=TRUE) {
   cyto_norm=norm_ch(image=x, index=index, minmaxnorm=minmaxnorm)
-  cyto_smooth<-EBImage::filter2(cyto_norm, makeBrush(size_smooth, shape="disc"), boundary=c("circular", "replicate"))
+  cyto_smooth<-EBImage::filter2(cyto_norm, EBImage::makeBrush(size_smooth, shape="disc"), boundary=c("circular", "replicate"))
   cmask<- mask_ch(cyto_smooth, filter_size, offset, opensize, shape="disc")
   c_sum<-sum_img(cyto_smooth)
-  outmask<-opening(cyto_smooth>c_sum[2])
+  outmask<-EBImage::opening(cyto_smooth>c_sum[2])
   combine <- cmask
   combine[outmask > cmask]=outmask[outmask>cmask]
   combine[y>combine]=y[y>combine]
   cseg<-EBImage::propagate(cyto_smooth, y, lambda=1e-2, mask=combine)
-  cseg=fillHull(cseg)
+  cseg=EBImage::fillHull(cseg)
   #xy<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
   #chkpt(xy)
   cf<-EBImage::computeFeatures.shape(cseg)
@@ -94,7 +101,7 @@ norm_ch <- function(image, index, minmaxnorm=TRUE) {
   if (minmaxnorm) {
     minCH = min(as.vector(ch))
     maxCH = max(as.vector(ch))
-    ch = normalize(ch, ft=c(0,1), c(minCH, maxCH))
+    ch = EBImage::normalize(ch, ft=c(0,1), c(minCH, maxCH))
   }
   return(ch)
 }
@@ -104,9 +111,9 @@ norm_ch <- function(image, index, minmaxnorm=TRUE) {
 #'@param shape shape of brush used to open mask (string)
 #'@inheritParams segmentNucleus
 mask_ch <- function(img, filter_size, offset, opensize, shape) {
-  mask = thresh(img, filter_size, filter_size, offset)
-  mask = opening(mask, makeBrush(opensize, shape=shape))
-  mask = fillHull(mask)
+  mask = EBImage::thresh(img, filter_size, filter_size, offset)
+  mask = EBImage::opening(mask, EBImage::makeBrush(opensize, shape=shape))
+  mask = EBImage::fillHull(mask)
   return(mask)
 }
 
