@@ -26,9 +26,9 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
   }
   chkpt(seg_nuc)
   #Remove small objects
-  nf=EBImage::computeFeatures.shape(mask_nuc)
+  nf=EBImage::computeFeatures.shape(seg_nuc)
   nr=which(nf[,2]<small_obj)
-  nseg=EBImage::rmObjects(mask_nuc, nr)
+  nseg=EBImage::rmObjects(seg_nuc, nr)
   chkpt(nseg)
   #Remove Outliers
   if (rm_outliers) {
