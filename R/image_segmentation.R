@@ -84,11 +84,10 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   xy.cseg<- as.numeric(row.names(EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]))
   ind.diff <- setdiff(xy.nseg, xy.cseg)
   nseg<-EBImage::rmObjects(y, ind.diff, reenumerate=F)
-  nseg=reenumerate(nseg)
-  cseg=reenumerate(cseg)
+  #nseg=reenumerate(nseg) #I can't find this function
+  #cseg=reenumerate(cseg)
   xy.nseg_table<-EBImage::computeFeatures.moment(nseg)[,c('m.cx', 'm.cy')]
   xy.cseg_table<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
-
   return(list(nuc_seg=nseg, xy_nuc=xy.nseg_table, seg=cseg, xy_cseg=xy.cseg_table))
 }
 
