@@ -1,0 +1,66 @@
+CheckReporter           Check reporter: 13 line summary of problems
+DebugReporter           Test reporter: start recovery.
+FailReporter            Test reporter: fail at end.
+JunitReporter           Test reporter: summary of errors in jUnit XML
+                        format.
+ListReporter            List reporter: gather all test results along
+                        with elapsed time and file information.
+LocationReporter        Test reporter: location
+MinimalReporter         Test reporter: minimal.
+MultiReporter           Multi reporter: combine several reporters in
+                        one.
+ProgressReporter        Test reporter: interactive progress bar of
+                        errors.
+RstudioReporter         Test reporter: RStudio
+SilentReporter          Test reporter: gather all errors silently.
+StopReporter            Test reporter: stop on error.
+SummaryReporter         Test reporter: summary of errors.
+TapReporter             Test reporter: TAP format.
+TeamcityReporter        Test reporter: Teamcity format.
+auto_test               Watches code and tests for changes, rerunning
+                        tests as appropriate.
+auto_test_package       Watches a package for changes, rerunning tests
+                        as appropriate.
+comparison-expectations
+                        Expectation: is returned value less or greater
+                        than specified value?
+describe                describe: a BDD testing language
+equality-expectations   Expectation: is an object equal to a reference
+                        value?
+expect                  The building block of all 'expect_' functions
+expect_error            Expectation: does code throw an error, warning,
+                        message, or other condition?
+expect_invisible        Expectation: does expression return visibly or
+                        invisibly?
+expect_length           Expectation: does a vector have the specified
+                        length?
+expect_match            Expectation: does string match a regular
+                        expression?
+expect_named            Expectation: does object have names?
+expect_output           Expectation: does code print output to the
+                        console?
+expect_reference        Do two names point to the same underlying
+                        object?
+expect_setequal         Expectation: do two vectors contain the same
+                        values?
+expect_silent           Expectation: is the code silent?
+expect_snapshot         Snapshot testing
+expect_vector           Expectation: does the object have vctr
+                        properties?
+fail                    Default expectations that always succeed or
+                        fail.
+inheritance-expectations
+                        Expectation: does the object inherit from a S3
+                        or S4 class, or is it a base type?
+is_testing              Determine testing status
+logical-expectations    Expectation: is the object true/false?
+skip                    Skip a test.
+snapshot_accept         Snapshot management
+teardown_env            Run code after all test files
+test_dir                Run all tests in a directory
+test_file               Run all tests in a single file
+test_package            Run all tests in a package
+test_path               Locate file in testing directory.
+test_that               Create a test.
+use_catch               Use Catch for C++ Unit Testing
+verify_output           Verify output

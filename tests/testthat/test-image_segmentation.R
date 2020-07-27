@@ -1,0 +1,34 @@
+## To run all tests enter devtools::test()
+
+test_that("Nuclei segmentation returns >3 mask objects", {
+  img = LoadImage("~/Documents/test_tifs/HAB135_WT_Tom20-CAT-dapi_tile-1.czi_-_WT_Tom20-CAT-dapi_tile-1_02.tif")
+  nseg = segmentNucleus(img, index=1, minmaxnorm=TRUE,
+                            int=2, filter_size=25, offset=0.01, opensize=3,
+                            small_obj=30, use_watershed=FALSE, distmap_value=2,
+                            rm_outliers=FALSE, out_p=0.95, displaymasks=TRUE)
+  nf = EBImage::computeFeatures.moment(nseg$seg)
+  expect(length(nf)>3)
+})
+
+test_that("Nuclei segmentation-remove outliers", {
+  img = LoadImage("~/Documents/test_tifs/HAB135_WT_Tom20-CAT-dapi_tile-1.czi_-_WT_Tom20-CAT-dapi_tile-1_02.tif")
+  nseg = segmentNucleus(img, image, index=1, minmaxnorm=TRUE,
+                            int=2, filter_size=25, offset=0.01, opensize=3,
+                            small_obj=30, use_watershed=FALSE, distmap_value=2,
+                            rm_outliers=TRUE, out_p=0.95)
+  nf = EBImage::computeFeatures.moment(nseg)
+  expect(length(nf)>3)
+})
+
+test_that("Cell segmentation returns >3 mask objects", {
+  img = LoadImage("~/Documents/test_tifs/HAB135_WT_Tom20-CAT-dapi_tile-1.czi_-_WT_Tom20-CAT-dapi_tile-1_02.tif")
+  nseg = segmentNucleus(img, index=1, minmaxnorm=TRUE,
+                        int=2, filter_size=25, offset=0.01, opensize=3,
+                        small_obj=30, use_watershed=FALSE, distmap_value=2,
+                        rm_outliers=FALSE, out_p=0.95, displaymasks=TRUE)
+  cseg = segmentCyto(img, nseg$seg, index=2, int=40, filter_size=10,
+                     offset=0.1, size_smooth=19,
+                     opensize=7, largeobj=30000, minmaxnorm=TRUE)
+  cf = EBImage::computeFeatures.moment(cseg$seg)
+  expect(length(cf)>3)
+})
