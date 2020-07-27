@@ -57,4 +57,81 @@ pickCells<-function(mask_nuc, xy, Ts.mix,int, parameters_nuc, font_size=0.7, lab
   return(list(table_train=Ts.mix, segsel=seg_class_sel))
 } 
 
-#'
+##! How to train with multiple images?
+
+#'2.3 SVM model 
+#' @param 
+#' @return 
+#' @export
+modelSVM<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
+  ind0<-which(is.na(Table_class_train$predict))
+  if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+  ind<-which(is.na(Table_class_train$predict))
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+  ind1<-grep("\\d",Table_class_train$predict)
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]  
+  x<-(Table_class_train[,2:19])
+  y<-Table_class_train[,20]
+  if (kernel_linear){
+    acc<-rep(0,100)
+    pb <- progress_bar$new(total = 100)
+    for (i in 1:length(acc)){
+      pb$tick()
+      TestIndex<-sample(nrow(x),round(nrow(x)/2))
+      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-predict(model,x[-TestIndex,])
+      acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)
+    }
+  }else{
+    acc<-rep(0,100)
+    pb <- progress_bar$new(total = 100)
+    for (i in 1:length(acc)){
+      pb$tick()
+      TestIndex<-sample(nrow(x),round(nrow(x)/2))
+      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-predict(model,x[-TestIndex,])
+      acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)}
+  }
+  mean(acc)
+  return(acc)
+}
+
+#' 2.4 PCA Analysis: features reduction 
+#' @param 
+#' @return 
+#' @export
+
+featuresPCA<-function(Table_class_train, cartesian_lim_x=c(-12,10), cartesian_lim_y=c(-10,5), font_size=14){
+  ind0<-which(is.na(Table_class_train$predict))
+  if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+  ind<-which(is.na(Table_class_train$predict))
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+  ind1<-grep("\\d",Table_class_train$predict)
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]   
+  Table_class_train<-Table_class_train %>% filter_at(vars(1:20), all_vars(!is.infinite(.)))
+  x<-1
+  z<-sample(1:nrow(Table_class_train),nrow(Table_class_train))
+  while (x<10){
+    myPr <- try(prcomp(Table_class_train[z, 2:19], scale = TRUE))
+    if (inherits(myPr, "try-error")) {
+      x<-x+1
+      z<-sample(1:nrow(Table_class_train),round(nrow(Table_class_train)/x,2))
+    }else{
+      break
+    }
+  }
+  PCA_PLOT<-ggbiplot(myPr, pc.biplot = T,obs.scale = 2, var.scale = 1, groups = F, ellipse = F, circle = F,alpha = 0.02,varname.adjust = 5)+
+    coord_cartesian(xlim = cartesian_lim_x,ylim = cartesian_lim_y)+
+    theme(axis.title.x =element_text(size = font_size))+
+    theme(axis.title.y =element_text(size = font_size))+
+    theme(axis.text = element_text(size=font_size))+
+    theme(axis.line = element_line(colour = "black",size=1), panel.border = element_blank(),panel.background = element_blank())+
+    labs(title="PCA - feature selection") + 
+    theme(plot.title = element_text(hjust = 0.5))+
+    theme(panel.border = element_blank(),panel.background = element_blank())+
+    theme(panel.grid.minor = element_line(colour = "white"))+
+    theme(panel.border = element_blank(),panel.background = element_blank())+
+    theme(panel.grid.minor = element_line(colour = "white"))+
+    theme(legend.position="none")
+  return(PCA_PLOT)
+}
