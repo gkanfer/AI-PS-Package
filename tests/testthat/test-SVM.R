@@ -34,6 +34,8 @@ test_that("Pick cells correct output, selected cells", {
     expect(nrow(out$table_train)>3)
 })
 
-test_that("Test SVM model built from training data", {
-  
-})
+#! need demo classification data
+# test_that("Test SVM model function builds model & returns its accuracy from training data", {
+#   
+#   total_table = rbind(pos, neg)
+# })

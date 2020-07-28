@@ -62,22 +62,24 @@ pickCells<-function(mask_nuc, x, xy_nuc, Ts.mix, int, font_size=0.7, label_class
 
 ##! How to train with multiple images? Let user make their own loop using segmentNuc -> segmentCyto -> pickCells ? Loop would need to return a single table for all images in order to work with current modelSVM function
 
+##! Does SVM model function incoroporate both positive and negative classification? Should there be two table arguments (pos, neg), or should their pickCells output actually be a single table for both negative and positive.. but how does that work? 
+
 #'2.3 SVM model 
-#' @param Table_class_train Single table with all classified cells' data (returned from pickCells)
+#' @param total_train Combined table of both positive and negative classified cells
 #' @param kernel_linear ??
 #' @param cost ?
 #' @param degree ?
 #' @return model accuracy **and model??
 #' @export
-modelSVM<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
-  ind0<-which(is.na(Table_class_train$predict))
-  if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
-  ind<-which(is.na(Table_class_train$predict))
-  if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
-  ind1<-grep("\\d",Table_class_train$predict)
-  if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]  
-  x<-(Table_class_train[,2:19])
-  y<-Table_class_train[,20]
+modelSVM<-function(total_train, kernel_linear=TRUE,cost= 10, degree = 45){
+  ind0<-which(is.na(total_train$predict))
+  if (length(ind0)>1) total_train<-total_train[-ind0,]
+  ind<-which(is.na(total_train$predict))
+  if (length(ind)>1) total_train<-total_train[-ind,]
+  ind1<-grep("\\d",total_train$predict)
+  if (length(ind)>1) total_train<-total_train[-ind1,]  
+  x<-total_train[,2:19]
+  y<-total_train[,20]
   if (kernel_linear){
     acc<-rep(0,100)
     pb <- progress::progress_bar$new(total = 100)
