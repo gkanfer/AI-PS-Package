@@ -18,3 +18,4 @@ table_moment = EBImage::computeFeatures.moment(cseg$seg,cseg$norm)
 table_basic = EBImage::computeFeatures.basic(cseg$seg,cseg$norm)
 table_test <- as.data.frame(cbind(table_basic,table_moment,table_shape))
 table_test$predict <- "Positive"
+typeof(table_test)

@@ -27,10 +27,10 @@ extractFeatures <- function(x, mask_cyto, label_class="Positive") {
 #' @param
 #' @return
 #' @export
-pickCells<-function(mask_nuc, x, xy, xy_nuc, Ts.mix, int, font_size=0.7, label_class="Postive", display_select=TRUE) {
-  seg_disp = EBImage::paintObjects(mask_nuc, EBImage::toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
-  display(seg_disp,"raster")
-  celltext = text(x=xy[,1], y= parameters_nuc[,2], labels="", col="yellow", cex=font_size)
+pickCells<-function(mask_nuc, x, xy_nuc, Ts.mix, int, font_size=0.7, label_class="Postive", display_select=TRUE) {
+  seg_disp = EBImage::paintObjects(mask_nuc, EBImage::toRGB(x*int),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
+  EBImage::display(seg_disp,"raster")
+  celltext = text(x=xy_nuc[,1], y=xy_nuc[,2], labels="", col="yellow", cex=font_size)
   c<-0
   readline(paste0("Select", label_class, "cells"))
   temp<-locator()
@@ -54,7 +54,7 @@ pickCells<-function(mask_nuc, x, xy, xy_nuc, Ts.mix, int, font_size=0.7, label_c
   Table_class<-list()
   if (display_select) {
     seg.temp = EBImage::rmObjects(mask_nuc, nr)
-    seg_class_sel = EBImage::paintObjects(seg.temp,EBImage::toRGB(x*intens),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
+    seg_class_sel = EBImage::paintObjects(seg.temp,EBImage::toRGB(x*int),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
   }
   return(list(table_train=Ts.mix, segsel=seg_class_sel))
 } 
