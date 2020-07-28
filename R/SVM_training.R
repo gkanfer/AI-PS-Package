@@ -145,3 +145,54 @@ featuresPCA<-function(Table_class_train, cartesian_lim_x=c(-12,10), cartesian_li
     theme(legend.position="none")
   return(PCA_PLOT)
 }
+
+#2.4 Features selection and SVM model tuning
+#' @param 
+#' @return 
+#' @export
+SVM_FeatureSel<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
+  ind0<-which(is.na(Table_class_train$predict))
+  if (length(ind0)>1) Table_class_train<-Table_class_train[-ind0,]
+  ind<-which(is.na(Table_class_train$predict))
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind,]
+  ind1<-grep("\\d",Table_class_train$predict)
+  if (length(ind)>1) Table_class_train<-Table_class_train[-ind1,]   
+  Table_class_train<-Table_class_train %>% filter_at(vars(1:20), all_vars(!is.infinite(.)))
+  vec<-NULL  
+  for (i in 2:19){
+    print(colnames(Table_class_train[i]))
+    vec.temp<-readline("Include Feture ? Y/N")
+    vec.temp<-as.character(vec.temp)
+    if (vec.temp=="Y"){
+      vec<-c(vec,i)
+    }
+    rm(vec.temp)  
+  }
+  Table_class_sel<-Table_class_train[,c(vec,which(colnames(Table_class_train)=="predict"))]
+  x<-Table_class_sel[,-(ncol(Table_class_sel))]
+  y<-Table_class_train$predict
+  pb <- progress_bar$new(total = 100)
+  if (kernel_linear){
+    acc<-rep(0,100)
+    for (i in 1:length(acc)){
+      pb$tick()
+      TestIndex<-sample(nrow(x),round(nrow(x)/2))
+      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-predict(model,x[-TestIndex,])
+      acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)
+    }
+  }else{
+    acc<-rep(0,100)
+    for (i in 1:length(acc)){
+      pb$tick()
+      TestIndex<-sample(nrow(x),round(nrow(x)/2))
+      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-predict(model,x[-TestIndex,])
+      acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)}
+  }
+  model_svm<-list()
+  model_svm[["ACC"]]<-acc
+  model_svm[["Selected_Features"]]<-colnames(x)
+  model_svm[["model"]]<-model
+  return(model_svm)
+}
