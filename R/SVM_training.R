@@ -1,6 +1,8 @@
 #' 2.1 Measures cell features
-#' @param
-#' @return
+#' @param x (Normalized) image of cytosolic/phenotype channel. Value returned from segmentCyto (out$norm) or user generated via EBImage. 
+#' @param mask_cyto Cell segmentation mask output from segmentCyto
+#' @param label_class String. Positive or Negative. 
+#' @return List of table, and row-names table (?) with features (cytosolic img) for each segmented cell 
 #' @export
 
 extractFeatures <- function(x, mask_cyto, label_class="Positive") {
@@ -9,17 +11,16 @@ extractFeatures <- function(x, mask_cyto, label_class="Positive") {
   table_basic = EBImage::computeFeatures.basic(mask_cyto,x)
   table_test <- as.data.frame(cbind(table_basic,table_moment,table_shape))
   #table_test$predict <- label_class 
-  # #! what is purpose of rownames, table restructuring ?
+  ##! what is purpose of rownames, table restructuring ?
   rownameTable<-row.names(table_test)
   #table_test$predict<-label_class
   feature_table<-data.frame(cbind(rownameTable,table_test))
   Ts.mix<-feature_table[,2:20]
   rowNameTable<-feature_table[,1]
-  Ts.mix$predict<-label_class #what is the point of this? Won't the predict column be filled in during pickCells function?
+  Ts.mix$predict<-label_class #! what is the point of this? Won't the predict column be filled in during pickCells function?
   Features_Table<-list()
   Features_Table[["Ts.mix"]]<-Ts.mix
   Features_Table[["rowNameTable"]]<-rowNameTable
-  #return(list(table=feature_table, names=rowNameTable))
   return(Features_Table)
 }
 

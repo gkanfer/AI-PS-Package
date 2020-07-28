@@ -91,7 +91,7 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   return(list(nuc_seg=nseg, xy_nuc=xy.nseg_table, seg=cseg2, xy_cseg=xy.cseg_table, norm=cyto_norm))
 }
 
-###Internal Functions###
+###These are Internal Functions invisible to the user and referenced in above (exported) functions###
 #' Return single channel from loaded image
 #' @inheritParams load_image
 #' @return single channel image
