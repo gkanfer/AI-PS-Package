@@ -55,7 +55,10 @@ segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,
 #' Segments cells using nuclei seeds and cytosolic marker
 #' @param x loaded image
 #' @param y nseg returned from segmentNucleus
+#' @param index Integer. Which channel (1,2...) has cytosolic / phenotype image
+#' @param largeobj Integer. Maximum size (area) of cell included in final segmentation.
 #' @inheritParams norm_ch
+#' @return List. Nucleus segmentation mask (nuc_seg), cytosolic segmentation mask (seg), mask features for nucleus segmentation (xy_nuc) and cytosolic segmentation (xy_cseg), normalized single cytosolic channel image (norm)
 #' @export
 
 segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_smooth=19,
@@ -78,7 +81,7 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   ci=which(cf[,1]>largeobj)
   cseg2=EBImage::rmObjects(cseg, ci, reenumerate=FALSE)
 
-  #? what is this doing?
+  #! what is this doing?
   xy.nseg<-as.numeric(row.names(EBImage::computeFeatures.moment(y)[,c('m.cx', 'm.cy')]))
   xy.cseg<- as.numeric(row.names(EBImage::computeFeatures.moment(cseg2)[,c('m.cx', 'm.cy')]))
   ind.diff <- setdiff(xy.nseg, xy.cseg)
@@ -87,7 +90,6 @@ segmentCyto <- function(x, y, index=2, int=40, filter_size=10, offset=0.1, size_
   #cseg=reenumerate(cseg)
   xy.nseg_table<-EBImage::computeFeatures.moment(nseg)[,c('m.cx', 'm.cy')]
   xy.cseg_table<-EBImage::computeFeatures.moment(cseg)[,c('m.cx', 'm.cy')]
-  # return(list(seg=cseg, nuc_seg=nseg, cytoch=cyto_norm))
   return(list(nuc_seg=nseg, xy_nuc=xy.nseg_table, seg=cseg2, xy_cseg=xy.cseg_table, norm=cyto_norm))
 }
 
@@ -105,7 +107,7 @@ norm_ch <- function(image, index, minmaxnorm=TRUE) {
   return(ch)
 }
 
-#'generates pre-segmented mask for single-channel image
+#'Make pre-segmented mask for single-channel image
 #'@param img processed or normalized single-channel image
 #'@param shape shape of brush used to open mask (string)
 #'@inheritParams segmentNucleus
@@ -116,7 +118,7 @@ mask_ch <- function(img, filter_size, offset, opensize, shape) {
   return(mask)
 }
 
-#'
+#'Summary of channel intensity, used for image thresholding 
 sum_img <- function(img) {
   ar=as.vector(img)
   ar.sum=as.numeric(summary(ar))
