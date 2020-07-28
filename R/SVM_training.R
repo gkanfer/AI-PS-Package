@@ -54,7 +54,8 @@ pickCells<-function(mask_nuc, x, xy_nuc, Ts.mix, int, font_size=0.7, label_class
   Table_class<-list()
   if (display_select) {
     seg.temp = EBImage::rmObjects(mask_nuc, nr)
-    seg_class_sel = EBImage::paintObjects(seg.temp,EBImage::toRGB(x*int),opac=c(1,0.8),col=c("Green",NA),thick=TRUE,closed=FALSE)
+    seg_class_sel = EBImage::paintObjects(seg.temp,EBImage::toRGB(x*int),opac=c(1,0.8),col=c("Red",NA),thick=TRUE,closed=FALSE)
+    EBImage::display(out$segsel)
   }
   return(list(table_train=Ts.mix, segsel=seg_class_sel))
 } 
@@ -62,8 +63,11 @@ pickCells<-function(mask_nuc, x, xy_nuc, Ts.mix, int, font_size=0.7, label_class
 ##! How to train with multiple images? Let user make their own loop using segmentNuc -> segmentCyto -> pickCells ? Loop would need to return a single table for all images in order to work with current modelSVM function
 
 #'2.3 SVM model 
-#' @param 
-#' @return 
+#' @param Table_class_train Single table with all classified cells' data (returned from pickCells)
+#' @param kernel_linear ??
+#' @param cost ?
+#' @param degree ?
+#' @return model accuracy **and model??
 #' @export
 modelSVM<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
   ind0<-which(is.na(Table_class_train$predict))
@@ -80,22 +84,23 @@ modelSVM<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
     for (i in 1:length(acc)){
       pb$tick()
       TestIndex<-sample(nrow(x),round(nrow(x)/2))
-      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
-      y.pred<-predict(model,x[-TestIndex,])
+      model<-e1071::svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="linear",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-e1071::predict(model,x[-TestIndex,])
       acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)
     }
   }else{
     acc<-rep(0,100)
-    pb <- progress_bar$new(total = 100)
+    pb <- progress::progress_bar$new(total = 100)
     for (i in 1:length(acc)){
       pb$tick()
       TestIndex<-sample(nrow(x),round(nrow(x)/2))
-      model<-svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
-      y.pred<-predict(model,x[-TestIndex,])
+      model<-e1071::svm(x=x[TestIndex,], y=as.factor(y[TestIndex]),kernel="radial",type = "C",cost= 10, degree = 45,probability = TRUE)
+      y.pred<-e1071::predict(model,x[-TestIndex,])
       acc[i]=length(which(y.pred==y[-TestIndex]))/length(y.pred)}
   }
   mean(acc)
-  return(acc)
+  #return(acc) #! should this function also return a model?
+  return(list(model=model, acc=acc))
 }
 
 #' 2.4 PCA Analysis: features reduction 
