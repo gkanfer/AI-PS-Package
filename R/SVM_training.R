@@ -80,7 +80,7 @@ modelSVM<-function(Table_class_train,kernel_linear=TRUE,cost= 10, degree = 45){
   y<-Table_class_train[,20]
   if (kernel_linear){
     acc<-rep(0,100)
-    pb <- progress_bar$new(total = 100)
+    pb <- progress::progress_bar$new(total = 100)
     for (i in 1:length(acc)){
       pb$tick()
       TestIndex<-sample(nrow(x),round(nrow(x)/2))
