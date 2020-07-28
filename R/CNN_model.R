@@ -1,14 +1,16 @@
 ## 3 CNN Training
 #' 3.1 Generation and upload of single cell images for CNN training
+#' @param y Cell segmentation mask generated from segmentCyto
+#' @param x Image 
 #' @param 
 #' @return 
 #' @export
-genImageSet <- function(y,x,base_dir,train_dir,validation_dir,test_dir,train_norm_dir,train_swol_dir,validation_norm_dir,
-                        original_dataset_dir_norm,original_dataset_dir_swol,tr.mx,val.mx,tst.mx){
+genImageSet <- function(y, x, base_dir, train_dir, validation_dir, test_dir, train_norm_dir, train_swol_dir, validation_norm_dir, original_dataset_dir_norm, original_dataset_dir_swol, tr.mx, val.mx, tst.mx){
   #Break the 20x magnification image into single cell images
   stack<-stackObjects(y,x*intens,ext = c(satck_size,satck_size))
   #Folders creation 
-  train_dir <- file.path(base_dir, "train")
+  train_dir <- createdir(base_dir, "train")
+  val_dir <- file.path(base_dir, "val")
   dir.create(train_dir)
   validation_dir <- file.path(base_dir, "validation")
   dir.create(validation_dir)
@@ -82,8 +84,12 @@ genImageSet <- function(y,x,base_dir,train_dir,validation_dir,test_dir,train_nor
   #dir()
   tifsS<-dir()[grep(".tif$",dir())]
   lapply(tifsS, Fimg)
-  
-  
-  
-  
+}
+
+##Internal Functions##
+#' Directory create
+createdir <- function(path, subpath) {
+  dir <- file.path(path, subpath)
+  dir.create(dir)
+  return(dir)
 }
