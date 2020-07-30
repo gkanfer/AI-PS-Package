@@ -1,20 +1,55 @@
 ## 3 CNN Training
 
-#! Should CNN training have its own pickCells (classification-based selection) function or share the same one from the SVM section? 
+#! Should CNN training have its own pickCells (classification-based selection) function
 
 #' 3.1 Generation and upload of single cell images for CNN training
-#' @param x Image 
-#' @param y Cell segmentation mask generated from segmentCyto
+#' @param 
 #' @param pheno0 String. Name of control (normal) phenotype
 #' @param pheno1 String. Name of positive phenotype
+#' @param label_class String. Classification of negative or positive phenotype?
 #' @return 
 #' @export
-genImageSet <- function(x, y, base_dir, pheno0, pheno1){
+genImageSet <- function(cseg, base_dir, pheno0, pheno1, int){
+  dir.create(file.path(base_dir, pheno0))
+  dir.create(file.path(base_dir, pheno1))
+  nseg = cseg$nuc_seg
+  x=cseg$norm
+  #classify cells 
+  seg_disp = EBImage::paintObjects(nseg, EBImage::toRGB(x*int),opac=c(1,0.8),col=c("Green",NA), thick=TRUE,closed=FALSE)
+  EBImage::display(seg_disp,"raster")
+  celltext = text(x=xy_nuc[,1], y=xy_nuc[,2], labels="", col="yellow", cex=font_size)
+  c<-0
+  readline(paste0("Select Positive cells"))
+  temp<-locator()
+  c<-c(c,temp)
+  xy<-EBImage::computeFeatures.moment(nseg)[,c('m.cx','m.cy')]
+  df.c <- cbind(c$x,c$y)
+  knn.out <- yaImpute::ann(as.matrix(xy), as.matrix(df.c), k=2)
+  pos_row<-knn.out$knnIndexDist
+  readline(paste0("Select Negative cells"))
+  temp<-locator()
+  c<-c(c,temp)
+  xy<-EBImage::computeFeatures.moment(nseg)[,c('m.cx','m.cy')]
+  df.c <- cbind(c$x,c$y)
+  knn.out <- yaImpute::ann(as.matrix(xy), as.matrix(df.c), k=2)
+  neg_row<-knn.out$knnIndexDist
+  
+  #Save individual cells/files in phenotype dir
+  #stack<-EBImage::stackObjects(cseg$seg, x,ext = c(satck_size, satck_size)) #! do we need the ext option? Where does satck_size come from?
+  stack<-EBImage::stackObjects(cseg$seg, x)
+  listobj=EBImage::getFrames(stack)
+  
+  poslist=listobj[pos_row]
+  neglist=listobj[neg_row]
+  
+  for (i in listobj) {
+    path = file.path(base_dir, pheno0)
+  }
+  } 
+  
+  
   #Break the 20x magnification image into single cell images
-  stack<-EBImage::stackObjects(y, x*intens,ext = c(satck_size, satck_size)) #! do we need the ext option? Where does satck_size come from?
-  
-  #Save individual files in phenotype dir
-  
+ 
   
   #! I don't think we should include this preprocessing function. Move to generator creation if we still want that option
   # Fimg <- function(x) {
@@ -58,6 +93,10 @@ splitDirs <- function(base_dir, pheno0, pheno1, test_ratio) {
 }
 
 ##Internal Functions##
+#'@param  cseg Output (list) from segmentCyto
+#'
+
+
 #' #' Directory create
 #' createdir <- function(path, subpath) {
 #'   dir <- file.path(path, subpath)
