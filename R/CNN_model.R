@@ -26,6 +26,7 @@ genImageSet <- function(cseg, base_dir, pheno0, pheno1, int){
   df.c <- cbind(c$x,c$y)
   knn.out <- yaImpute::ann(as.matrix(xy), as.matrix(df.c), k=2)
   pos_row<-knn.out$knnIndexDist
+  
   readline(paste0("Select Negative cells"))
   temp<-locator()
   c<-c(c,temp)
@@ -35,21 +36,25 @@ genImageSet <- function(cseg, base_dir, pheno0, pheno1, int){
   neg_row<-knn.out$knnIndexDist
   
   #Save individual cells/files in phenotype dir
-  #stack<-EBImage::stackObjects(cseg$seg, x,ext = c(satck_size, satck_size)) #! do we need the ext option? Where does satck_size come from?
   stack<-EBImage::stackObjects(cseg$seg, x)
-  listobj=EBImage::getFrames(stack)
   
-  poslist=listobj[pos_row]
-  neglist=listobj[neg_row]
-  
-  for (i in listobj) {
-    path = file.path(base_dir, pheno0)
+  if (pos_row != 0) {
+    p_frames=getFrames(stack, i=pos_row)
+    for (i in 1:length(p_frames)) {
+      img = p_frames[[i]]
+    }
   }
-  } 
+  if (neg_row !=0) {
+    n_frames=getFrames(stack, i=neg_row)
+    for (i in 1:length(n_frames)) {
+      
+    }
+  }
   
   
   #Break the 20x magnification image into single cell images
- 
+  #stack<-EBImage::stackObjects(cseg$seg, x,ext = c(satck_size, satck_size)) 
+  #! do we need the ext option? Where does satck_size come from?
   
   #! I don't think we should include this preprocessing function. Move to generator creation if we still want that option
   # Fimg <- function(x) {

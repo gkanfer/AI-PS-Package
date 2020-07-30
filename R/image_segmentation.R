@@ -10,7 +10,7 @@
 #' @param use_watershed TRUE/FALSE, whether to use EBImage watershed for segmenting, instead of simpler bwlabel function
 #' @param distmap_value If watershed=TRUE, edge sensitivity of segmentation
 #' @param rm_outliers TRUE/FALSE ?
-#' @param out_p=?
+#' @param out_p ?
 #' @return list: segmented nuclei mask, xy features, (display masks on image)
 #' @export
 segmentNucleus <- function(image, index=1, minmaxnorm=TRUE,

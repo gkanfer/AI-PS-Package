@@ -19,7 +19,7 @@ test_that("Extract features works", {
 #   cseg = segmentCyto(img, nseg$seg, index=3, int=10, filter_size=100,
 #                      offset=0.01, size_smooth=19, opensize=7, largeobj=100000, minmaxnorm=TRUE)
 #   table = extractFeatures(img, cseg$seg)
-#   expect_output(pickCells(nseg$seg, cseg$norm, nseg$features, table$Ts.mix, int=10, font_size=0.7, label_class="Postive", display_select=TRUE))
+#   expect_output(pickCells(nseg$seg, cseg$norm, nseg$features, table$Ts.mix, int=10, font_size=0.7, label_class="Positive", display_select=TRUE))
 # })
 
 test_that("Pick cells correct output, selected cells", {
